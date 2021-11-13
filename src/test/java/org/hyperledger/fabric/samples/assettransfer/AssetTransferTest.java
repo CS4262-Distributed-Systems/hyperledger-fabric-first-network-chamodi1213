@@ -302,4 +302,57 @@ public final class AssetTransferTest {
             assertThat(((ChaincodeException) thrown).getPayload()).isEqualTo("ASSET_NOT_FOUND".getBytes());
         }
     }
+
+    @Nested
+    class InvokeDuplicateAsset{
+        @Test
+        public void WhenAssetExistWithDuplicate() {
+            AssetTransfer contract = new AssetTransfer();
+            Context ctx = mock(Context.class);
+            ChaincodeStub stub = mock(ChaincodeStub.class);
+            when(ctx.getStub()).thenReturn(stub);
+            when(stub.getStringState("asset1"))
+                    .thenReturn("{ \"assetID\": \"asset1\", \"color\": \"blue\", \"size\": 5, \"owner\": \"Tomoko\", \"appraisedValue\": 300 }");
+
+
+            Asset duplicateAsset = contract.DuplicateAsset(ctx, "asset1", "asset2", "Alan");
+            assertThat(duplicateAsset).isEqualTo(new Asset("asset2", "blue", 5, "Alan", 300));
+        }
+
+        @Test
+        public void WhenAssetExistsWithoutDuplicate () {
+            AssetTransfer contract = new AssetTransfer();
+            Context ctx = mock(Context.class);
+            ChaincodeStub stub = mock(ChaincodeStub.class);
+            when(ctx.getStub()).thenReturn(stub);
+            when(stub.getStringState("asset1"))
+                    .thenReturn("{ \"assetID\": \"asset1\", \"color\": \"blue\", \"size\": 5, \"owner\": \"Tomoko\", \"appraisedValue\": 300 }");
+
+            Throwable thrown = catchThrowable(() -> {
+                contract.DuplicateAsset(ctx,"asset1", "asset1", "Alan");
+            });
+
+            assertThat(thrown).isInstanceOf(ChaincodeException.class).hasNoCause()
+                    .hasMessage("Asset asset1 already exists");
+            assertThat(((ChaincodeException) thrown).getPayload()).isEqualTo("ASSET_ALREADY_EXISTS".getBytes());
+        }
+
+        @Test
+        public void whenAssetDoesNotExist() {
+            AssetTransfer contract = new AssetTransfer();
+            Context ctx = mock(Context.class);
+            ChaincodeStub stub = mock(ChaincodeStub.class);
+            when(ctx.getStub()).thenReturn(stub);
+            when(stub.getStringState("asset1")).thenReturn("");
+
+            Throwable thrown = catchThrowable(() -> {
+                contract.DuplicateAsset(ctx, "asset1", "asset2", "Alan");
+            });
+
+            assertThat(thrown).isInstanceOf(ChaincodeException.class).hasNoCause()
+                    .hasMessage("Asset asset1 does not exist");
+            assertThat(((ChaincodeException) thrown).getPayload()).isEqualTo("ASSET_NOT_FOUND".getBytes());
+        }
+
+    }
 }
